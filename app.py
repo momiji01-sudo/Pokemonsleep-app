@@ -3,54 +3,59 @@ import random
 
 st.set_page_config(page_title="ポケスリ厳選計算機", page_icon="📊", layout="centered")
 
-# --- CSS: 横幅を詰め、余白を最小化する ---
+# --- CSS: Chromeでの余白を強制排除 ---
 st.markdown("""
     <style>
-    /* 全体の余白を削る */
-    .block-container { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+    /* 画面全体の最大幅を制限して中央に寄せる */
+    .main .block-container {
+        max-width: 500px !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
     
-    /* カラム間の隙間を最小にする */
+    /* カラムの隙間（gap）を強制的にゼロにする */
     [data-testid="stHorizontalBlock"] {
-        display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        align-items: center !important;
-        gap: 2px !important; /* 隙間を極限まで詰める */
+        gap: 0px !important;
     }
     
-    /* ボタンのサイズとフォントをよりコンパクトに */
+    /* 各カラムの中身を左寄せにする */
+    [data-testid="stVerticalBlock"] {
+        gap: 0px !important;
+    }
+
+    /* ボタンのサイズを極限まで小さくし、横幅を自動にする */
     button {
-        padding: 1px 4px !important;
+        padding: 0px 6px !important;
         font-size: 0.7rem !important;
-        min-height: 0 !important;
-        height: 24px !important;
+        height: 22px !important;
+        width: auto !important;
+        min-width: 40px !important;
     }
 
-    /* チェックボックス周りの余白を詰める */
+    /* チェックボックスのラベルを左に詰める */
     .stCheckbox {
-        margin-bottom: -12px !important;
-        font-size: 0.8rem !important;
+        margin-bottom: -10px !important;
     }
-    .stCheckbox div[data-testid="stMarkdownContainer"] p {
-        font-size: 0.8rem !important;
-        white-space: nowrap !important;
+    .stCheckbox label {
+        padding: 0px !important;
     }
 
-    /* グループラベルの調整 */
+    /* グループラベルのスタイル */
     .group-label {
         font-weight: bold;
         font-size: 0.8rem;
+        margin-right: 5px;
         white-space: nowrap;
-        margin-right: 2px;
+        display: inline-block;
     }
-
-    /* ヘッダーの隙間を詰める */
-    h1 { font-size: 1.5rem !important; margin-bottom: -10px !important; }
-    h2 { font-size: 1.1rem !important; margin-top: 10px !important; margin-bottom: 5px !important; }
+    
+    /* セクション間の隙間を詰める */
+    h1 { font-size: 1.3rem !important; margin-bottom: -15px !important; }
+    h2 { font-size: 1.0rem !important; margin-top: 5px !important; }
     </style>
 """, unsafe_allow_html=True)
 
-st.caption("Ver 7.1 - 超スリムレイアウト復元版")
+st.caption("Ver 7.2 - Chrome/Mobile 強制左寄せ版")
 
 # --- データ定義 ---
 GOLD_LIST = ["🟡きのみの数S", "🟡おてつだいボーナス", "🟡睡眠EXPボーナス", "🟡スキルレベルアップM", "🟡げんき回復ボーナス", "🟡ゆめのかけらボーナス", "🟡リサーチEXPボーナス"]
@@ -69,7 +74,7 @@ NATURE_GROUPS = {
 ING_LIST = ['AAA', 'AAB', 'AAC', 'ABA', 'ABB', 'ABC']
 ING_VALS = {'AAA': 1/9, 'AAB': 1/9, 'AAC': 1/9, 'ABA': 2/9, 'ABB': 2/9, 'ABC': 2/9}
 
-# --- コールバック関数 ---
+# --- コールバック ---
 def set_nature_group(g_key, val):
     for n in NATURE_GROUPS[g_key]: st.session_state[f"n_{n[0]}"] = val
 def set_all_natures(val):
@@ -80,20 +85,24 @@ def set_all_ings(val):
 
 st.title("📊 ポケスリ厳選計算機")
 
+# --- 1. 基本条件 ---
 st.header("1. 基本条件")
 medal = st.selectbox("フレンドレベル（メダル）", ["なし (1〜9)", "銅 (10〜39)", "銀 (40〜99)", "金 (100〜)"], index=1)
 medal_v = {"なし (1〜9)": 0, "銅 (10〜39)": 1, "銀 (40〜99)": 2, "金 (100〜)": 3}[medal]
 
 st.write("▼ 性格選択")
-anc1, anc2 = st.columns(2)
+anc1, anc2 = st.columns([1, 1])
 anc1.button("全性格を選択", on_click=set_all_natures, args=(True,))
 anc2.button("全性格を解除", on_click=set_all_natures, args=(False,))
 
 for g_label, natures in NATURE_GROUPS.items():
-    h_cols = st.columns([1.5, 1, 1])
+    # グループ見出し行：幅を明示的に指定して左に寄せる
+    h_cols = st.columns([1.2, 0.4, 0.4, 2]) 
     h_cols[0].markdown(f'<div class="group-label">【{g_label}】</div>', unsafe_allow_html=True)
     h_cols[1].button("全選", key=f"all_{g_label}", on_click=set_nature_group, args=(g_label, True))
     h_cols[2].button("解除", key=f"clr_{g_label}", on_click=set_nature_group, args=(g_label, False))
+    # h_cols[3] は余白として機能（右側を空ける）
+
     for j in range(0, len(natures), 2):
         row_cols = st.columns(2)
         for k in range(2):
@@ -102,26 +111,28 @@ for g_label, natures in NATURE_GROUPS.items():
                 label = f"{name} ({effect})" if effect else name
                 row_cols[k].checkbox(label, key=f"n_{name}")
 
+# --- 食材配列 ---
 st.write("▼ 食材配列選択")
-ic1, ic2 = st.columns(2)
+ic1, ic2 = st.columns([1, 1])
 ic1.button("全食材を選択", on_click=set_all_ings, args=(True,))
 ic2.button("全食材を解除", on_click=set_all_ings, args=(False,))
 for i in range(0, len(ING_LIST), 3):
     row_cols_i = st.columns(3)
     for j in range(3):
         if i + j < len(ING_LIST):
-            row_cols_i[j].checkbox(ING_LIST[i + j], key=f"i_{ING_LIST[i + j]}")
+            n = ING_LIST[i + j]
+            row_cols_i[j].checkbox(n, key=f"i_{n}")
 
+# --- 2. サブスキル ---
 st.header("2. サブスキル条件")
 s10 = st.multiselect("10Lv", ALL_SKILLS)
 s25 = st.multiselect("25Lv", ALL_SKILLS)
 s50 = st.multiselect("50Lv", ALL_SKILLS)
 s75 = st.multiselect("75Lv", ALL_SKILLS)
 s100 = st.multiselect("100Lv", ALL_SKILLS)
-sany = st.multiselect("順一度：必須スキル", ALL_SKILLS)
+sany = st.multiselect("順不同：必須スキル", ALL_SKILLS)
 
 if st.button("計算開始", type="primary", use_container_width=True):
-    # --- 計算ロジックは変更なし ---
     sel_n = [n[0] for g in NATURE_GROUPS.values() for n in g if st.session_state.get(f"n_{n[0]}")]
     sel_i = [i for i in ING_LIST if st.session_state.get(f"i_{i}")]
     
