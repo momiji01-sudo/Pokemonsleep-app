@@ -16,7 +16,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.caption("Ver 6.5 - 全選択・食材順修正済み")
+st.caption("Ver 6.6 - 食材配列の並び順を左から右へ固定")
 
 # --- データ定義 ---
 GOLD_LIST = ["🟡きのみの数S", "🟡おてつだいボーナス", "🟡睡眠EXPボーナス", "🟡スキルレベルアップM", "🟡げんき回復ボーナス", "🟡ゆめのかけらボーナス", "🟡リサーチEXPボーナス"]
@@ -33,22 +33,19 @@ NATURE_GROUPS = {
     "【無補正】": [("てれや", ""), ("がんばりや", ""), ("すなお", ""), ("まじめ", ""), ("きまぐれ", "")]
 }
 
-# 食材をアルファベット順に完全固定
+# 食材をアルファベット順に定義
 ING_LIST = ['AAA', 'AAB', 'AAC', 'ABA', 'ABB', 'ABC']
 ING_VALS = {'AAA': 1/9, 'AAB': 1/9, 'AAC': 1/9, 'ABA': 2/9, 'ABB': 2/9, 'ABC': 2/9}
 
-# --- コールバック関数 (ボタンが確実に効くようにする) ---
+# --- コールバック関数 ---
 def select_all_natures():
     for g in NATURE_GROUPS.values():
         for n in g: st.session_state[f"n_{n[0]}"] = True
-
 def clear_all_natures():
     for g in NATURE_GROUPS.values():
         for n in g: st.session_state[f"n_{n[0]}"] = False
-
 def select_all_ings():
     for i in ING_LIST: st.session_state[f"i_{i}"] = True
-
 def clear_all_ings():
     for i in ING_LIST: st.session_state[f"i_{i}"] = False
 
@@ -66,22 +63,32 @@ nc2.button("性格を全解除", on_click=clear_all_natures)
 selected_natures = []
 for group_name, natures in NATURE_GROUPS.items():
     st.markdown(f'<div class="group-label">{group_name}</div>', unsafe_allow_html=True)
-    cols = st.columns(2)
-    for i, (name, effect) in enumerate(natures):
-        label = f"{name} ({effect})" if effect else name
-        if cols[i % 2].checkbox(label, key=f"n_{name}"):
-            selected_natures.append(name)
+    # 性格も左から右へ (1,2 / 3,4) の順で並ぶように修正
+    for j in range(0, len(natures), 2):
+        row_cols = st.columns(2)
+        for k in range(2):
+            if j + k < len(natures):
+                name, effect = natures[j + k]
+                label = f"{name} ({effect})" if effect else name
+                if row_cols[k].checkbox(label, key=f"n_{name}"):
+                    selected_natures.append(name)
 
-st.write("▼ 食材配列選択（AAAからの順）")
+st.write("▼ 食材配列選択（AAA, AAB, AAC...の順）")
 ic1, ic2 = st.columns(2)
 ic1.button("食材を全選択", on_click=select_all_ings)
 ic2.button("食材を全解除", on_click=clear_all_ings)
 
 selected_ings = []
-cols_i = st.columns(3)
-for i, name in enumerate(ING_LIST):
-    if cols_i[i % 3].checkbox(name, key=f"i_{name}"):
-        selected_ings.append(name)
+# 3列で左から順に並ぶように明示的にループを回す
+# 行1: AAA, AAB, AAC
+# 行2: ABA, ABB, ABC
+for i in range(0, len(ING_LIST), 3):
+    row_cols_i = st.columns(3)
+    for j in range(3):
+        if i + j < len(ING_LIST):
+            name = ING_LIST[i + j]
+            if row_cols_i[j].checkbox(name, key=f"i_{name}"):
+                selected_ings.append(name)
 
 st.header("2. サブスキル条件")
 s10 = st.multiselect("10Lv", ALL_SKILLS)
@@ -93,16 +100,15 @@ sany = st.multiselect("順不同：必須スキル", ALL_SKILLS)
 
 if st.button("計算開始", type="primary", use_container_width=True):
     if not selected_natures or not selected_ings:
-        st.error("性格と食材を選択してください")
+        st.error("条件を選んでください")
     else:
         with st.spinner('計算中...'):
             it = 100000; ok = 0
             total_ing_p = sum([ING_VALS[p] for p in selected_ings])
+            flat_all_n = [n[0] for g in NATURE_GROUPS.values() for n in g]
             for _ in range(it):
                 if random.random() > total_ing_p: continue
-                # 全性格の中から1つ抽選
-                flat_all = [n[0] for g in NATURE_GROUPS.values() for n in g]
-                nature_sample = random.choice(flat_all)
+                nature_sample = random.choice(flat_all_n)
                 if nature_sample not in selected_natures: continue
                 
                 s = []
