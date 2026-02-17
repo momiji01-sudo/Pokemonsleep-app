@@ -3,32 +3,26 @@ import random
 
 st.set_page_config(page_title="ポケスリ厳選計算機", page_icon="📊")
 
-# --- CSS: ボタンとラベルの横並びを最適化 ---
+# --- CSS: レイアウト調整 ---
 st.markdown("""
     <style>
-    /* 全体ボタンの横並び */
-    [data-testid="stHorizontalBlock"]:has(button) {
+    /* ボタンの横並びを維持 */
+    [data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
-        gap: 8px !important;
+        align-items: center !important;
+        gap: 5px !important;
     }
-    /* 性格グループの見出しとボタンの横並び */
-    .group-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: #f0f2f6;
-        padding: 5px 10px;
-        border-radius: 5px;
-        margin-top: 15px;
-        margin-bottom: 5px;
+    /* スマホでボタンがはみ出さないように調整 */
+    button {
+        padding: 2px 5px !important;
+        font-size: 0.8rem !important;
     }
-    .group-title { font-weight: bold; color: #ff4b4b; font-size: 0.9rem; }
     .stCheckbox { white-space: nowrap !important; margin-bottom: -5px !important; }
     </style>
 """, unsafe_allow_html=True)
 
-st.caption("Ver 6.7 - グループ別選択ボタン搭載")
+st.caption("Ver 6.8 - TypeError修正版")
 
 # --- データ定義 ---
 GOLD_LIST = ["🟡きのみの数S", "🟡おてつだいボーナス", "🟡睡眠EXPボーナス", "🟡スキルレベルアップM", "🟡げんき回復ボーナス", "🟡ゆめのかけらボーナス", "🟡リサーチEXPボーナス"]
@@ -47,16 +41,19 @@ NATURE_GROUPS = {
 ING_LIST = ['AAA', 'AAB', 'AAC', 'ABA', 'ABB', 'ABC']
 ING_VALS = {'AAA': 1/9, 'AAB': 1/9, 'AAC': 1/9, 'ABA': 2/9, 'ABB': 2/9, 'ABC': 2/9}
 
-# --- コールバック関数 ---
-def set_nature_group(group_key, val):
-    for n in NATURE_GROUPS[group_key]: st.session_state[f"n_{n[0]}"] = val
+# --- コールバック関数 (エラー回避のため引数を単純化) ---
+def set_nature_group(g_key, val):
+    for n in NATURE_GROUPS[g_key]:
+        st.session_state[f"n_{n[0]}"] = val
 
 def set_all_natures(val):
     for g in NATURE_GROUPS.values():
-        for n in g: st.session_state[f"n_{n[0]}"] = val
+        for n in g:
+            st.session_state[f"n_{n[0]}"] = val
 
 def set_all_ings(val):
-    for i in ING_LIST: st.session_state[f"i_{i}"] = val
+    for i in ING_LIST:
+        st.session_state[f"i_{i}"] = val
 
 st.title("📊 ポケスリ厳選計算機")
 
@@ -65,18 +62,17 @@ medal = st.selectbox("フレンドレベル（メダル）", ["なし (1〜9)", 
 medal_v = {"なし (1〜9)": 0, "銅 (10〜39)": 1, "銀 (40〜99)": 2, "金 (100〜)": 3}[medal]
 
 st.write("▼ 性格選択")
-# 全性格対象のボタン
 anc1, anc2 = st.columns(2)
 anc1.button("全性格を選択", on_click=set_all_natures, args=(True,))
 anc2.button("全性格を解除", on_click=set_all_natures, args=(False,))
 
 selected_natures = []
 for g_label, natures in NATURE_GROUPS.items():
-    # グループ見出しとボタンを横並びに配置
-    head_col1, head_col2, head_col3 = st.columns([2, 1, 1])
-    with head_col1: st.markdown(f'<div style="font-weight:bold; padding-top:5px;">【{g_label}】</div>', unsafe_allow_html=True)
-    with head_col2: st.button("全選", key=f"btn_all_{g_label}", on_click=set_nature_group, args=(g_label, True), size="small")
-    with head_col3: st.button("解除", key=f"btn_clr_{g_label}", on_click=set_nature_group, args=(g_label, False), size="small")
+    # ヘッダー部分を columns で分割 (size指定を削除してエラー回避)
+    h_col1, h_col2, h_col3 = st.columns([2, 1, 1])
+    h_col1.markdown(f"**【{g_label}】**")
+    h_col2.button("全選", key=f"all_{g_label}", on_click=set_nature_group, args=(g_label, True))
+    h_col3.button("解除", key=f"clr_{g_label}", on_click=set_nature_group, args=(g_label, False))
 
     for j in range(0, len(natures), 2):
         row_cols = st.columns(2)
@@ -121,6 +117,7 @@ if st.button("計算開始", type="primary", use_container_width=True):
                 if random.random() > total_ing_p: continue
                 nature_sample = random.choice(flat_all_n)
                 if nature_sample not in selected_natures: continue
+                
                 s = []
                 def pk(pool):
                     v = [x for x in pool if x not in s]
