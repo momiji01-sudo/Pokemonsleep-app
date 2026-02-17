@@ -33,19 +33,21 @@ st.markdown("""
         display: inline-block;
     }
     
-    /* 次のグループまでの余白を広めに設定 */
-    .group-container {
-        margin-bottom: 25px; 
+    /* グループ間の余白を強制 */
+    .section-margin {
+        margin-top: 30px !important;
+        margin-bottom: 5px !important;
+        display: block;
     }
-    
+
     h1 { font-size: 1.3rem !important; margin-bottom: -15px !important; }
     h2 { font-size: 1.0rem !important; margin-top: 5px !important; }
     </style>
 """, unsafe_allow_html=True)
 
-st.caption("Ver 7.4 - 表記スリム化(スピ↑食材↓) & グループ間隔調整")
+st.caption("Ver 7.5 - グループ間・セクション間の間隔修正版")
 
-# --- データ定義 (ご指定の表記に変更) ---
+# --- データ定義 ---
 NATURE_GROUPS = {
     "おてスピ↑": [
         ("さみしがり", "スピ↑げんき↓"), ("いじっぱり", "スピ↑食材↓"), 
@@ -91,6 +93,7 @@ def set_all_ings(val):
 
 st.title("📊 ポケスリ厳選計算機")
 
+# --- 1. 基本条件 ---
 st.header("1. 基本条件")
 medal = st.selectbox("フレンドレベル（メダル）", ["なし (1〜9)", "銅 (10〜39)", "銀 (40〜99)", "金 (100〜)"], index=1)
 medal_v = {"なし (1〜9)": 0, "銅 (10〜39)": 1, "銀 (40〜99)": 2, "金 (100〜)": 3}[medal]
@@ -100,10 +103,10 @@ anc1, anc2 = st.columns([1, 1])
 anc1.button("全性格を選択", on_click=set_all_natures, args=(True,))
 anc2.button("全性格を解除", on_click=set_all_natures, args=(False,))
 
-# 性格グループごとの表示
-for g_label, natures in NATURE_GROUPS.items():
-    # divで囲んでグループごとに余白を持たせる
-    st.markdown('<div class="group-container">', unsafe_allow_html=True)
+# 性格グループ表示
+for i, (g_label, natures) in enumerate(NATURE_GROUPS.items()):
+    # 各グループの前に十分なスペースを挿入
+    st.markdown('<div class="section-margin"></div>', unsafe_allow_html=True)
     
     h_cols = st.columns([1.2, 0.4, 0.4, 2]) 
     h_cols[0].markdown(f'<div class="group-label">【{g_label}】</div>', unsafe_allow_html=True)
@@ -115,12 +118,12 @@ for g_label, natures in NATURE_GROUPS.items():
         for k in range(2):
             if j + k < len(natures):
                 name, sub_label = natures[j + k]
-                full_display = f"{name}({sub_label})" if sub_label != "無補正" else f"{name}(無補正)"
+                full_display = f"{name}({sub_label})"
                 st.session_state.setdefault(f"n_{name}", False)
                 row_cols[k].checkbox(full_display, key=f"n_{name}")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
 
+# 食材配列の前に特別な間隔
+st.markdown('<div class="section-margin" style="margin-top: 40px !important;"></div>', unsafe_allow_html=True)
 st.write("▼ 食材配列選択")
 ic1, ic2 = st.columns([1, 1])
 ic1.button("全食材を選択", on_click=set_all_ings, args=(True,))
@@ -132,6 +135,8 @@ for i in range(0, len(ING_LIST), 3):
             n = ING_LIST[i + j]
             row_cols_i[j].checkbox(n, key=f"i_{n}")
 
+# --- 2. サブスキル ---
+st.markdown('<div class="section-margin"></div>', unsafe_allow_html=True)
 st.header("2. サブスキル条件")
 s10 = st.multiselect("10Lv", ALL_SKILLS)
 s25 = st.multiselect("25Lv", ALL_SKILLS)
