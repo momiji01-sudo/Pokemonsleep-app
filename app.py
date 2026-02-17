@@ -3,42 +3,51 @@ import random
 
 st.set_page_config(page_title="ポケスリ厳選計算機", page_icon="📊")
 
-# --- CSS: 枠の制限を物理的に破壊する ---
+# --- 【究極の強制力】標準機能を無視して横並びと省略禁止を叩き込む ---
 st.markdown("""
     <style>
-    /* 1. 性格タグの「...」を絶対に許さない設定 */
+    /* 1. 性格タグの省略[...]を絶対に許さず、中身に合わせて幅を無限に広げる */
     div[data-baseweb="tag"] {
-        max-width: 5000px !important; /* 枠を無限に広げる */
+        max-width: none !important;
         width: auto !important;
         min-width: max-content !important;
         white-space: nowrap !important;
         display: inline-flex !important;
+        flex-shrink: 0 !important;
     }
     div[data-baseweb="tag"] span {
-        display: block !important;
-        text-overflow: clip !important; /* 省略記号を消す */
+        display: inline !important;
+        text-overflow: clip !important;
         overflow: visible !important;
         white-space: nowrap !important;
     }
-    /* 2. 入力欄自体を横スクロール可能にする */
+    /* 性格選択欄を横スクロール可能にする */
     div[data-baseweb="select"] > div:first-child {
         overflow-x: auto !important;
-        display: flex !important;
         flex-wrap: nowrap !important;
+        display: flex !important;
     }
-    /* 3. ボタンの横並びを維持 */
-    div[data-testid="stHorizontalBlock"] {
+
+    /* 2. ボタンを「絶対に」横に2つ並べる（Streamlitのcolumnを無視してフレックス化） */
+    [data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
-        gap: 10px !important;
+        flex-wrap: nowrap !important;
+        justify-content: space-between !important;
+        width: 100% !important;
     }
-    div[data-testid="column"] {
-        flex: 1 1 50% !important;
+    [data-testid="stHorizontalBlock"] > div {
+        width: 48% !important;
+        min-width: 48% !important;
+        flex: 1 1 48% !important;
+    }
+    button {
+        width: 100% !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- データ定義 (絵文字版) ---
+# --- データ定義 ---
 GOLD_LIST = ["🟡きのみの数S", "🟡おてつだいボーナス", "🟡睡眠EXPボーナス", "🟡スキルレベルアップM", "🟡げんき回復ボーナス", "🟡ゆめのかけらボーナス", "🟡リサーチEXPボーナス"]
 ALL_SKILLS = ["🟡きのみの数S", "🟡おてつだいボーナス", "🟡睡眠EXPボーナス", "🟡スキルレベルアップM", "🟡げんき回復ボーナス", "🟡ゆめのかけらボーナス", "🟡リサーチEXPボーナス",
               "🔵おてつだいスピードM", "🔵食材確率アップM", "🔵スキル確率アップM", "🔵スキルレベルアップS", "🔵最大所持数アップL", "🔵最大所持数アップM",
@@ -56,6 +65,7 @@ if 'si' not in st.session_state: st.session_state.si = []
 
 st.title("📊 ポケスリ厳選計算機")
 
+# --- UIセクション ---
 st.header("1. 基本条件")
 medal = st.selectbox("フレンドレベル（メダル）", ["なし (1〜9)", "銅 (10〜39)", "銀 (40〜99)", "金 (100〜)"], index=1)
 medal_v = {"なし (1〜9)": 0, "銅 (10〜39)": 1, "銀 (40〜99)": 2, "金 (100〜)": 3}[medal]
