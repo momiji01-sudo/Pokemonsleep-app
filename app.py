@@ -4,29 +4,52 @@ import random
 # ページ設定
 st.set_page_config(page_title="ポケスリ厳選計算機", page_icon="📊")
 
-# --- CSS（ボタン横並びと改行防止のみ） ---
+# --- 【最終奥義】スマホの自動レイアウト崩れを完全に防ぐCSS ---
 st.markdown("""
     <style>
-    .stMultiSelect [data-baseweb="tag"] {
-        max-width: none !important;
-        white-space: nowrap !important;
-    }
-    .stMultiSelect [data-baseweb="tag"] span {
-        white-space: nowrap !important;
-    }
-    div[data-testid="stHorizontalBlock"] {
+    /* 1. ボタンを隙間なく確実に横並びにする（ボタンがある行だけを狙い撃ち） */
+    div[data-testid="stHorizontalBlock"]:has(button) {
         display: flex !important;
         flex-direction: row !important;
-        gap: 5px !important;
+        flex-wrap: nowrap !important;
+        gap: 10px !important;
+        align-items: center !important;
     }
-    div[data-testid="column"] {
+    div[data-testid="stHorizontalBlock"]:has(button) > div[data-testid="column"] {
         flex: 1 1 50% !important;
         min-width: 0 !important;
+        width: 50% !important;
+    }
+    div.stButton > button {
+        width: 100% !important;
+        padding: 5px 0 !important;
+    }
+
+    /* 2. 性格のタグが「...」になるのを完全に防ぎ、横に伸ばす */
+    .stMultiSelect div[data-baseweb="select"] > div:first-child {
+        flex-wrap: nowrap !important;     /* タグを複数行に分けない */
+        overflow-x: auto !important;      /* 画面外にはみ出た分は横スクロール可能に */
+        scrollbar-width: none !important; /* スクロールバーを隠す(見た目スッキリ) */
+        padding-bottom: 2px !important;
+    }
+    .stMultiSelect div[data-baseweb="select"] > div:first-child::-webkit-scrollbar {
+        display: none;
+    }
+    .stMultiSelect div[data-baseweb="tag"] {
+        flex-shrink: 0 !important;        /* 【超重要】画面が狭くてもタグを絶対に縮小させない */
+        max-width: none !important;       /* 最大幅の制限を解除 */
+        width: max-content !important;    /* 中身の文字数に合わせて背景を伸ばす */
+        white-space: nowrap !important;   /* 改行禁止 */
+    }
+    .stMultiSelect div[data-baseweb="tag"] span {
+        white-space: nowrap !important;
+        overflow: visible !important;
+        text-overflow: unset !important;  /* 「...」を無効化 */
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- データ定義 (確実に色が見えるよう絵文字を使用) ---
+# --- データ定義 ---
 GOLD_LIST = ["🟡きのみの数S", "🟡おてつだいボーナス", "🟡睡眠EXPボーナス", "🟡スキルレベルアップM", "🟡げんき回復ボーナス", "🟡ゆめのかけらボーナス", "🟡リサーチEXPボーナス"]
 ALL_SKILLS = [
     "🟡きのみの数S", "🟡おてつだいボーナス", "🟡睡眠EXPボーナス", "🟡スキルレベルアップM", "🟡げんき回復ボーナス", "🟡ゆめのかけらボーナス", "🟡リサーチEXPボーナス",
@@ -34,7 +57,6 @@ ALL_SKILLS = [
     "⚪おてつだいスピードS", "⚪食材確率アップS", "⚪スキル確率アップS", "⚪最大所持数アップS"
 ]
 
-# スマホ画面に収まるよう文字を少し短縮
 NATURE_OPTIONS = [
     "さみしがり (スピ↑/げん↓)", "いじっぱり (スピ↑/食↓)", "やんちゃ (スピ↑/スキ↓)", "ゆうかん (スピ↑/EXP↓)",
     "ひかえめ (食↑/スピ↓)", "おっとり (食↑/げん↓)", "うっかりや (食↑/スキ↓)", "れいせい (食↑/EXP↓)",
