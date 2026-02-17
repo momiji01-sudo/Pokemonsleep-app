@@ -33,11 +33,9 @@ st.markdown("""
         display: inline-block;
     }
     
-    /* グループ間の余白用 */
-    .group-spacer {
-        margin-top: 15px; 
-        border-top: 1px solid #eee;
-        padding-top: 5px;
+    /* 次のグループまでの余白を広めに設定 */
+    .group-container {
+        margin-bottom: 25px; 
     }
     
     h1 { font-size: 1.3rem !important; margin-bottom: -15px !important; }
@@ -45,29 +43,29 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.caption("Ver 7.3 - 補正詳細追記 & 間隔調整版")
+st.caption("Ver 7.4 - 表記スリム化(スピ↑食材↓) & グループ間隔調整")
 
-# --- データ定義 (補正内容を各名前に追記) ---
+# --- データ定義 (ご指定の表記に変更) ---
 NATURE_GROUPS = {
     "おてスピ↑": [
-        ("さみしがり", "おてスピ↑/げんき↓"), ("いじっぱり", "おてスピ↑/食材↓"), 
-        ("やんちゃ", "おてスピ↑/スキル↓"), ("ゆうかん", "おてスピ↑/EXP↓")
+        ("さみしがり", "スピ↑げんき↓"), ("いじっぱり", "スピ↑食材↓"), 
+        ("やんちゃ", "スピ↑スキル↓"), ("ゆうかん", "スピ↑EXP↓")
     ],
     "食材↑": [
-        ("ひかえめ", "食材↑/おてスピ↓"), ("おっとり", "食材↑/げんき↓"), 
-        ("うっかりや", "食材↑/スキル↓"), ("れいせい", "食材↑/EXP↓")
+        ("ひかえめ", "食材↑スピ↓"), ("おっとり", "食材↑げんき↓"), 
+        ("うっかりや", "食材↑スキル↓"), ("れいせい", "食材↑EXP↓")
     ],
     "スキル↑": [
-        ("おだやか", "スキル↑/おてスピ↓"), ("おとなしい", "スキル↑/げんき↓"), 
-        ("しんちょう", "スキル↑/食材↓"), ("なまいき", "スキル↑/EXP↓")
+        ("おだやか", "スキル↑スピ↓"), ("おとなしい", "スキル↑げんき↓"), 
+        ("しんちょう", "スキル↑食材↓"), ("なまいき", "スキル↑EXP↓")
     ],
     "げんき↑": [
-        ("ずぶとい", "げんき↑/おてスピ↓"), ("わんぱく", "げんき↑/食材↓"), 
-        ("のうてんき", "げんき↑/スキル↓"), ("のんき", "げんき↑/EXP↓")
+        ("ずぶとい", "げんき↑スピ↓"), ("わんぱく", "げんき↑食材↓"), 
+        ("のうてんき", "げんき↑スキル↓"), ("のんき", "げんき↑EXP↓")
     ],
     "EXP↑": [
-        ("おくびょう", "EXP↑/おてスピ↓"), ("せっかち", "EXP↑/げんき↓"), 
-        ("ようき", "EXP↑/食材↓"), ("むじゃき", "EXP↑/スキル↓")
+        ("おくびょう", "EXP↑スピ↓"), ("せっかち", "EXP↑げんき↓"), 
+        ("ようき", "EXP↑食材↓"), ("むじゃき", "EXP↑スキル↓")
     ],
     "無補正": [
         ("てれや", "無補正"), ("がんばりや", "無補正"), 
@@ -102,9 +100,10 @@ anc1, anc2 = st.columns([1, 1])
 anc1.button("全性格を選択", on_click=set_all_natures, args=(True,))
 anc2.button("全性格を解除", on_click=set_all_natures, args=(False,))
 
+# 性格グループごとの表示
 for g_label, natures in NATURE_GROUPS.items():
-    # グループ間の区切りスペース
-    st.markdown('<div class="group-spacer"></div>', unsafe_allow_html=True)
+    # divで囲んでグループごとに余白を持たせる
+    st.markdown('<div class="group-container">', unsafe_allow_html=True)
     
     h_cols = st.columns([1.2, 0.4, 0.4, 2]) 
     h_cols[0].markdown(f'<div class="group-label">【{g_label}】</div>', unsafe_allow_html=True)
@@ -115,9 +114,12 @@ for g_label, natures in NATURE_GROUPS.items():
         row_cols = st.columns(2)
         for k in range(2):
             if j + k < len(natures):
-                name, full_label = natures[j + k]
+                name, sub_label = natures[j + k]
+                full_display = f"{name}({sub_label})" if sub_label != "無補正" else f"{name}(無補正)"
                 st.session_state.setdefault(f"n_{name}", False)
-                row_cols[k].checkbox(full_label, key=f"n_{name}")
+                row_cols[k].checkbox(full_display, key=f"n_{name}")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
 st.write("▼ 食材配列選択")
 ic1, ic2 = st.columns([1, 1])
