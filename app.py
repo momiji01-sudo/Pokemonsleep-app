@@ -4,73 +4,43 @@ import random
 # ページ設定
 st.set_page_config(page_title="ポケスリ厳選計算機", page_icon="📊")
 
-# --- 【最終手段】背景ごと横に長くし、色を確実に適用するCSS ---
+# --- CSS（ボタン横並びと改行防止のみ） ---
 st.markdown("""
     <style>
-    /* 1. 性格の赤い背景を横に突き抜けさせる（折り返しを物理的に禁止） */
-    [data-baseweb="tag"] {
-        display: inline-flex !important;
-        white-space: nowrap !important;
+    .stMultiSelect [data-baseweb="tag"] {
         max-width: none !important;
-        width: max-content !important; /* 中身の長さに背景を合わせる */
-        overflow: visible !important;
-    }
-    [data-baseweb="tag"] > span {
         white-space: nowrap !important;
-        overflow: visible !important;
-        text-overflow: unset !important;
-        display: block !important;
     }
-
-    /* 2. サブスキルの色分け (innerTextを直接狙う設定) */
-    /* 金色 */
-    div[data-baseweb="tag"]:has(span:contains("きのみ")),
-    div[data-baseweb="tag"]:has(span:contains("おてつだいボーナス")),
-    div[data-baseweb="tag"]:has(span:contains("睡眠EXP")),
-    div[data-baseweb="tag"]:has(span:contains("レベルアップM")),
-    div[data-baseweb="tag"]:has(span:contains("げんき回復")),
-    div[data-baseweb="tag"]:has(span:contains("ゆめのかけら")),
-    div[data-baseweb="tag"]:has(span:contains("リサーチEXP")) {
-        background-color: #ffd700 !important; 
-        color: #000 !important;
-        border: 1px solid #b8860b !important;
+    .stMultiSelect [data-baseweb="tag"] span {
+        white-space: nowrap !important;
     }
-    /* 青色 (銀) - 既に金と判定されたものは上書きしない */
-    div[data-baseweb="tag"]:has(span:contains("M")):not(:has(span:contains("レベルアップM"))),
-    div[data-baseweb="tag"]:has(span:contains("最大所持数アップL")),
-    div[data-baseweb="tag"]:has(span:contains("レベルアップS")) {
-        background-color: #add8e6 !important; 
-        color: #000 !important;
-        border: 1px solid #4682b4 !important;
-    }
-    /* 白色 - その他Sスキル */
-    div[data-baseweb="tag"]:has(span:contains("S")):not(:has(span:contains("きのみ"))):not(:has(span:contains("おてつだい"))):not(:has(span:contains("レベルアップ"))) {
-        background-color: #ffffff !important;
-        color: #000 !important;
-        border: 1px solid #ccc !important;
-    }
-
-    /* 3. ボタンの横並び維持 */
     div[data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important;
+        gap: 5px !important;
     }
     div[data-testid="column"] {
         flex: 1 1 50% !important;
+        min-width: 0 !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 以下、データ定義とロジック (v4.8を継承) ---
-GOLD_LIST = ["きのみの数S", "おてつだいボーナス", "睡眠EXPボーナス", "スキルレベルアップM", "げんき回復ボーナス", "ゆめのかけらボーナス", "リサーチEXPボーナス"]
-ALL_SKILLS = ["きのみの数S", "おてつだいボーナス", "おてつだいスピードM", "おてつだいスピードS", "食材確率アップM", "食材確率アップS", "スキル確率アップM", "スキル確率アップS", "スキルレベルアップM", "スキルレベルアップS", "最大所持数アップL", "最大所持数アップM", "最大所持数アップS", "げんき回復ボーナス", "睡眠EXPボーナス", "ゆめのかけらボーナス", "リサーチEXPボーナス"]
+# --- データ定義 (確実に色が見えるよう絵文字を使用) ---
+GOLD_LIST = ["🟡きのみの数S", "🟡おてつだいボーナス", "🟡睡眠EXPボーナス", "🟡スキルレベルアップM", "🟡げんき回復ボーナス", "🟡ゆめのかけらボーナス", "🟡リサーチEXPボーナス"]
+ALL_SKILLS = [
+    "🟡きのみの数S", "🟡おてつだいボーナス", "🟡睡眠EXPボーナス", "🟡スキルレベルアップM", "🟡げんき回復ボーナス", "🟡ゆめのかけらボーナス", "🟡リサーチEXPボーナス",
+    "🔵おてつだいスピードM", "🔵食材確率アップM", "🔵スキル確率アップM", "🔵スキルレベルアップS", "🔵最大所持数アップL", "🔵最大所持数アップM",
+    "⚪おてつだいスピードS", "⚪食材確率アップS", "⚪スキル確率アップS", "⚪最大所持数アップS"
+]
+
+# スマホ画面に収まるよう文字を少し短縮
 NATURE_OPTIONS = [
-    "さみしがり (おてスピ↑/げんき↓)", "いじっぱり (おてスピ↑/食材↓)", "やんちゃ (おてスピ↑/スキル↓)", "ゆうかん (おてスピ↑/EXP↓)",
-    "ひかえめ (食材↑/おてスピ↓)", "おっとり (食材↑/げんき↓)", "うっかりや (食材↑/スキル↓)", "れいせい (食材↑/EXP↓)",
-    "おだやか (スキル↑/おてスピ↓)", "おとなしい (スキル↑/げんき↓)", "しんちょう (スキル↑/食材↓)", "なまいき (スキル↑/EXP↓)",
-    "ずぶとい (げんき↑/おてスピ↓)", "わんぱく (げんき↑/食材↓)", "のうてんき (げんき↑/スキル↓)", "のんき (げんき↑/EXP↓)",
-    "おくびょう (EXP↑/おてスピ↓)", "せっかち (EXP↑/げんき↓)", "ようき (EXP↑/食材↓)", "むじゃき (EXP↑/スキル↓)",
+    "さみしがり (スピ↑/げん↓)", "いじっぱり (スピ↑/食↓)", "やんちゃ (スピ↑/スキ↓)", "ゆうかん (スピ↑/EXP↓)",
+    "ひかえめ (食↑/スピ↓)", "おっとり (食↑/げん↓)", "うっかりや (食↑/スキ↓)", "れいせい (食↑/EXP↓)",
+    "おだやか (スキ↑/スピ↓)", "おとなしい (スキ↑/げん↓)", "しんちょう (スキ↑/食↓)", "なまいき (スキ↑/EXP↓)",
+    "ずぶとい (げん↑/スピ↓)", "わんぱく (げん↑/食↓)", "のうてんき (げん↑/スキ↓)", "のんき (げん↑/EXP↓)",
+    "おくびょう (EXP↑/スピ↓)", "せっかち (EXP↑/げん↓)", "ようき (EXP↑/食↓)", "むじゃき (EXP↑/スキ↓)",
     "てれや (無補正)", "がんばりや (無補正)", "すなお (無補正)", "まじめ (無補正)", "きまぐれ (無補正)"
 ]
 ING_PATTERNS = {'AAA': 1/9, 'AAB': 1/9, 'AAC': 1/9, 'ABA': 2/9, 'ABB': 2/9, 'ABC': 2/9}
