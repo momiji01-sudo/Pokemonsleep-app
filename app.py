@@ -3,20 +3,32 @@ import random
 
 st.set_page_config(page_title="ポケスリ厳選計算機", page_icon="📊")
 
-# --- CSS ---
+# --- CSS: ボタンとラベルの横並びを最適化 ---
 st.markdown("""
     <style>
+    /* 全体ボタンの横並び */
     [data-testid="stHorizontalBlock"]:has(button) {
         display: flex !important;
         flex-direction: row !important;
-        gap: 10px !important;
+        gap: 8px !important;
     }
-    .stCheckbox { white-space: nowrap !important; margin-bottom: -10px !important; }
-    .group-label { font-weight: bold; color: #ff4b4b; margin-top: 10px; border-bottom: 1px solid #ddd; }
+    /* 性格グループの見出しとボタンの横並び */
+    .group-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #f0f2f6;
+        padding: 5px 10px;
+        border-radius: 5px;
+        margin-top: 15px;
+        margin-bottom: 5px;
+    }
+    .group-title { font-weight: bold; color: #ff4b4b; font-size: 0.9rem; }
+    .stCheckbox { white-space: nowrap !important; margin-bottom: -5px !important; }
     </style>
 """, unsafe_allow_html=True)
 
-st.caption("Ver 6.6 - 食材配列の並び順を左から右へ固定")
+st.caption("Ver 6.7 - グループ別選択ボタン搭載")
 
 # --- データ定義 ---
 GOLD_LIST = ["🟡きのみの数S", "🟡おてつだいボーナス", "🟡睡眠EXPボーナス", "🟡スキルレベルアップM", "🟡げんき回復ボーナス", "🟡ゆめのかけらボーナス", "🟡リサーチEXPボーナス"]
@@ -25,29 +37,26 @@ ALL_SKILLS = ["🟡きのみの数S", "🟡おてつだいボーナス", "🟡�
               "⚪おてつだいスピードS", "⚪食材確率アップS", "⚪スキル確率アップS", "⚪最大所持数アップS"]
 
 NATURE_GROUPS = {
-    "【おてスピ↑】": [("さみしがり", "げんき↓"), ("いじっぱり", "食材↓"), ("やんちゃ", "スキル↓"), ("ゆうかん", "EXP↓")],
-    "【食材↑】": [("ひかえめ", "おてスピ↓"), ("おっとり", "げんき↓"), ("うっかりや", "スキル↓"), ("れいせい", "EXP↓")],
-    "【スキル↑】": [("おだやか", "おてスピ↓"), ("おとなしい", "げんき↓"), ("しんちょう", "食材↓"), ("なまいき", "EXP↓")],
-    "【げんき↑】": [("ずぶとい", "おてスピ↓"), ("わんぱく", "食材↓"), ("のうてんき", "スキル↓"), ("のんき", "EXP↓")],
-    "【EXP↑】": [("おくびょう", "おてスピ↓"), ("せっかち", "げんき↓"), ("ようき", "食材↓"), ("むじゃき", "スキル↓")],
-    "【無補正】": [("てれや", ""), ("がんばりや", ""), ("すなお", ""), ("まじめ", ""), ("きまぐれ", "")]
+    "おてスピ↑": [("さみしがり", "げんき↓"), ("いじっぱり", "食材↓"), ("やんちゃ", "スキル↓"), ("ゆうかん", "EXP↓")],
+    "食材↑": [("ひかえめ", "おてスピ↓"), ("おっとり", "げんき↓"), ("うっかりや", "スキル↓"), ("れいせい", "EXP↓")],
+    "スキル↑": [("おだやか", "おてスピ↓"), ("おとなしい", "げんき↓"), ("しんちょう", "食材↓"), ("なまいき", "EXP↓")],
+    "げんき↑": [("ずぶとい", "おてスピ↓"), ("わんぱく", "食材↓"), ("のうてんき", "スキル↓"), ("のんき", "EXP↓")],
+    "EXP↑": [("おくびょう", "おてスピ↓"), ("せっかち", "げんき↓"), ("ようき", "食材↓"), ("むじゃき", "スキル↓")],
+    "無補正": [("てれや", ""), ("がんばりや", ""), ("すなお", ""), ("まじめ", ""), ("きまぐれ", "")]
 }
-
-# 食材をアルファベット順に定義
 ING_LIST = ['AAA', 'AAB', 'AAC', 'ABA', 'ABB', 'ABC']
 ING_VALS = {'AAA': 1/9, 'AAB': 1/9, 'AAC': 1/9, 'ABA': 2/9, 'ABB': 2/9, 'ABC': 2/9}
 
 # --- コールバック関数 ---
-def select_all_natures():
+def set_nature_group(group_key, val):
+    for n in NATURE_GROUPS[group_key]: st.session_state[f"n_{n[0]}"] = val
+
+def set_all_natures(val):
     for g in NATURE_GROUPS.values():
-        for n in g: st.session_state[f"n_{n[0]}"] = True
-def clear_all_natures():
-    for g in NATURE_GROUPS.values():
-        for n in g: st.session_state[f"n_{n[0]}"] = False
-def select_all_ings():
-    for i in ING_LIST: st.session_state[f"i_{i}"] = True
-def clear_all_ings():
-    for i in ING_LIST: st.session_state[f"i_{i}"] = False
+        for n in g: st.session_state[f"n_{n[0]}"] = val
+
+def set_all_ings(val):
+    for i in ING_LIST: st.session_state[f"i_{i}"] = val
 
 st.title("📊 ポケスリ厳選計算機")
 
@@ -56,14 +65,19 @@ medal = st.selectbox("フレンドレベル（メダル）", ["なし (1〜9)", 
 medal_v = {"なし (1〜9)": 0, "銅 (10〜39)": 1, "銀 (40〜99)": 2, "金 (100〜)": 3}[medal]
 
 st.write("▼ 性格選択")
-nc1, nc2 = st.columns(2)
-nc1.button("性格を全選択", on_click=select_all_natures)
-nc2.button("性格を全解除", on_click=clear_all_natures)
+# 全性格対象のボタン
+anc1, anc2 = st.columns(2)
+anc1.button("全性格を選択", on_click=set_all_natures, args=(True,))
+anc2.button("全性格を解除", on_click=set_all_natures, args=(False,))
 
 selected_natures = []
-for group_name, natures in NATURE_GROUPS.items():
-    st.markdown(f'<div class="group-label">{group_name}</div>', unsafe_allow_html=True)
-    # 性格も左から右へ (1,2 / 3,4) の順で並ぶように修正
+for g_label, natures in NATURE_GROUPS.items():
+    # グループ見出しとボタンを横並びに配置
+    head_col1, head_col2, head_col3 = st.columns([2, 1, 1])
+    with head_col1: st.markdown(f'<div style="font-weight:bold; padding-top:5px;">【{g_label}】</div>', unsafe_allow_html=True)
+    with head_col2: st.button("全選", key=f"btn_all_{g_label}", on_click=set_nature_group, args=(g_label, True), size="small")
+    with head_col3: st.button("解除", key=f"btn_clr_{g_label}", on_click=set_nature_group, args=(g_label, False), size="small")
+
     for j in range(0, len(natures), 2):
         row_cols = st.columns(2)
         for k in range(2):
@@ -73,15 +87,12 @@ for group_name, natures in NATURE_GROUPS.items():
                 if row_cols[k].checkbox(label, key=f"n_{name}"):
                     selected_natures.append(name)
 
-st.write("▼ 食材配列選択（AAA, AAB, AAC...の順）")
+st.write("▼ 食材配列選択")
 ic1, ic2 = st.columns(2)
-ic1.button("食材を全選択", on_click=select_all_ings)
-ic2.button("食材を全解除", on_click=clear_all_ings)
+ic1.button("全食材を選択", on_click=set_all_ings, args=(True,))
+ic2.button("全食材を解除", on_click=set_all_ings, args=(False,))
 
 selected_ings = []
-# 3列で左から順に並ぶように明示的にループを回す
-# 行1: AAA, AAB, AAC
-# 行2: ABA, ABB, ABC
 for i in range(0, len(ING_LIST), 3):
     row_cols_i = st.columns(3)
     for j in range(3):
@@ -100,7 +111,7 @@ sany = st.multiselect("順不同：必須スキル", ALL_SKILLS)
 
 if st.button("計算開始", type="primary", use_container_width=True):
     if not selected_natures or not selected_ings:
-        st.error("条件を選んでください")
+        st.error("性格と食材を選択してください")
     else:
         with st.spinner('計算中...'):
             it = 100000; ok = 0
@@ -110,7 +121,6 @@ if st.button("計算開始", type="primary", use_container_width=True):
                 if random.random() > total_ing_p: continue
                 nature_sample = random.choice(flat_all_n)
                 if nature_sample not in selected_natures: continue
-                
                 s = []
                 def pk(pool):
                     v = [x for x in pool if x not in s]
@@ -120,7 +130,6 @@ if st.button("計算開始", type="primary", use_container_width=True):
                 v50 = pk(GOLD_LIST if medal_v >= 3 else ALL_SKILLS); s.append(v50)
                 v75 = pk(ALL_SKILLS); s.append(v75)
                 v100 = pk(ALL_SKILLS); s.append(v100)
-                
                 ca = True
                 for t, v in zip([s10, s25, s50, s75, s100], [v10, v25, v50, v75, v100]):
                     if t and v not in t: ca = False; break
