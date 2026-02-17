@@ -4,65 +4,73 @@ import random
 # ページ設定
 st.set_page_config(page_title="ポケスリ厳選計算機", page_icon="📊")
 
-# --- 【最強版】改行阻止 ＆ スキル色分けCSS ---
+# --- 【スマホ完全強制】レイアウト & 色分けCSS ---
 st.markdown("""
     <style>
-    /* 1. 性格補正の改行を阻止し、省略[...]を消す */
-    div[data-baseweb="tag"] {
-        max-width: none !important;
+    /* 1. 性格補正の改行を物理的に禁止し、省略(...)を許さない */
+    [data-baseweb="tag"] {
+        max-width: 5000px !important; /* 極端に大きく */
+        width: auto !important;
         white-space: nowrap !important;
+        display: inline-flex !important;
     }
-    div[data-baseweb="tag"] span {
+    [data-baseweb="tag"] span {
+        white-space: nowrap !important;
         overflow: visible !important;
-        text-overflow: clip !important;
-        white-space: nowrap !important;
+        text-overflow: unset !important;
     }
 
-    /* 2. サブスキルの色分け (背景色と枠線) */
-    /* 金スキル: 黄色背景 */
-    div[data-baseweb="tag"]:has(span[title*="きのみの数S"]),
-    div[data-baseweb="tag"]:has(span[title*="おてつだいボーナス"]),
-    div[data-baseweb="tag"]:has(span[title*="睡眠EXP"]),
-    div[data-baseweb="tag"]:has(span[title*="スキルレベルアップM"]),
-    div[data-baseweb="tag"]:has(span[title*="げんき回復ボーナス"]),
-    div[data-baseweb="tag"]:has(span[title*="ゆめのかけら"]),
-    div[data-baseweb="tag"]:has(span[title*="リサーチEXP"]) {
-        background-color: #FFF9C4 !important; /* 明るい黄 */
-        border: 1px solid #FBC02D !important;
-        color: #000 !important;
-    }
-
-    /* 銀スキル: 青色背景 (Mが付くものなど) */
-    div[data-baseweb="tag"]:has(span[title$="M"]),
-    div[data-baseweb="tag"]:has(span[title*="最大所持数アップL"]),
-    div[data-baseweb="tag"]:has(span[title*="スキルレベルアップS"]) {
-        background-color: #E3F2FD !important; /* 明るい青 */
-        border: 1px solid #2196F3 !important;
-        color: #000 !important;
-    }
-
-    /* 白スキル: 白背景 */
-    div[data-baseweb="tag"]:has(span[title$="S"]):not(:has(span[title*="きのみ"])):not(:has(span[title*="おてつだい"])) {
-        background-color: #FFFFFF !important;
-        border: 1px solid #BDBDBD !important;
-        color: #000 !important;
-    }
-
-    /* 3. ボタンの横並び強制 */
+    /* 2. ボタンをスマホでも絶対に横並びにする(フレックスボックス強制) */
     div[data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
-        align-items: center !important;
+        flex-wrap: nowrap !important;
+        width: 100% !important;
+        gap: 8px !important;
     }
     div[data-testid="column"] {
-        width: 50% !important;
-        flex: 1 1 auto !important;
+        flex: 1 1 50% !important;
+        min-width: 0 !important; /* 縮小を許可して横並びを維持 */
+    }
+
+    /* 3. サブスキルの色分け (属性セレクタでより確実に) */
+    /* 金色 */
+    div[data-baseweb="tag"]:has(span:contains("きのみ")),
+    div[data-baseweb="tag"]:has(span:contains("おてつだいボーナス")),
+    div[data-baseweb="tag"]:has(span:contains("睡眠EXP")),
+    div[data-baseweb="tag"]:has(span:contains("スキルレベルアップM")),
+    div[data-baseweb="tag"]:has(span:contains("げんき回復")),
+    div[data-baseweb="tag"]:has(span:contains("ゆめのかけら")),
+    div[data-baseweb="tag"]:has(span:contains("リサーチEXP")) {
+        background-color: #ffd700 !important; /* 金 */
+        color: #000 !important;
+        border: 1px solid #b8860b !important;
+    }
+    /* 青色 (銀) */
+    div[data-baseweb="tag"]:has(span:contains("M")):not(:has(span:contains("レベルアップ"))),
+    div[data-baseweb="tag"]:has(span:contains("最大所持数アップL")),
+    div[data-baseweb="tag"]:has(span:contains("スキルレベルアップS")) {
+        background-color: #add8e6 !important; /* 水色 */
+        color: #000 !important;
+        border: 1px solid #4682b4 !important;
+    }
+    /* 白色 */
+    div[data-baseweb="tag"]:has(span:contains("S")):not(:has(span:contains("きのみ"))):not(:has(span:contains("おてつだいボーナス"))):not(:has(span:contains("M"))):not(:has(span:contains("L"))) {
+        background-color: #ffffff !important;
+        color: #000 !important;
+        border: 1px solid #ccc !important;
+    }
+
+    /* 全体のフォントサイズ微調整(スマホ用) */
+    .stMultiSelect label, .stSelectbox label {
+        font-size: 14px !important;
+        font-weight: bold !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
 # --- データ定義 ---
-GOLD_SKILLS = ["きのみの数S", "おてつだいボーナス", "睡眠EXPボーナス", "スキルレベルアップM", "げんき回復ボーナス", "ゆめのかけらボーナス", "リサーチEXPボーナス"]
+GOLD_LIST = ["きのみの数S", "おてつだいボーナス", "睡眠EXPボーナス", "スキルレベルアップM", "げんき回復ボーナス", "ゆめのかけらボーナス", "リサーチEXPボーナス"]
 ALL_SKILLS = ["きのみの数S", "おてつだいボーナス", "おてつだいスピードM", "おてつだいスピードS", "食材確率アップM", "食材確率アップS", "スキル確率アップM", "スキル確率アップS", "スキルレベルアップM", "スキルレベルアップS", "最大所持数アップL", "最大所持数アップM", "最大所持数アップS", "げんき回復ボーナス", "睡眠EXPボーナス", "ゆめのかけらボーナス", "リサーチEXPボーナス"]
 
 NATURE_OPTIONS = [
@@ -75,68 +83,66 @@ NATURE_OPTIONS = [
 ]
 ING_PATTERNS = {'AAA': 1/9, 'AAB': 1/9, 'AAC': 1/9, 'ABA': 2/9, 'ABB': 2/9, 'ABC': 2/9}
 
-# セッション状態
-if 'selected_natures' not in st.session_state: st.session_state.selected_natures = []
-if 'selected_ings' not in st.session_state: st.session_state.selected_ings = []
+if 'sn' not in st.session_state: st.session_state.sn = []
+if 'si' not in st.session_state: st.session_state.si = []
 
 st.title("📊 ポケスリ厳選計算機")
 
-# UI構築
+# --- UIセクション ---
 st.header("1. 基本条件")
 medal = st.selectbox("フレンドレベル（メダル）", ["なし (1〜9)", "銅 (10〜39)", "銀 (40〜99)", "金 (100〜)"], index=1)
-medal_val = {"なし (1〜9)": 0, "銅 (10〜39)": 1, "銀 (40〜99)": 2, "金 (100〜)": 3}[medal]
+medal_v = {"なし (1〜9)": 0, "銅 (10〜39)": 1, "銀 (40〜99)": 2, "金 (100〜)": 3}[medal]
 
 st.write("▼ 性格選択")
-cn1, cn2 = st.columns(2)
-if cn1.button("性格を全選択"): st.session_state.selected_natures = NATURE_OPTIONS
-if cn2.button("性格を全解除"): st.session_state.selected_natures = []
-selected_natures = st.multiselect("性格を選んでください", options=NATURE_OPTIONS, key="selected_natures")
+c1, c2 = st.columns(2)
+if c1.button("全選択", key="na"): st.session_state.sn = NATURE_OPTIONS
+if c2.button("全解除", key="nc"): st.session_state.sn = []
+sel_n = st.multiselect("性格", options=NATURE_OPTIONS, key="sn", label_visibility="collapsed")
 
 st.write("▼ 食材配列")
-ci1, ci2 = st.columns(2)
-if ci1.button("食材を全選択"): st.session_state.selected_ings = list(ING_PATTERNS.keys())
-if ci2.button("食材を全解除"): st.session_state.selected_ings = []
-selected_ings = st.multiselect("食材配列を選んでください", list(ING_PATTERNS.keys()), key="selected_ings")
+c3, c4 = st.columns(2)
+if c3.button("全選択", key="ia"): st.session_state.si = list(ING_PATTERNS.keys())
+if c4.button("全解除", key="ic"): st.session_state.si = []
+sel_i = st.multiselect("食材", list(ING_PATTERNS.keys()), key="si", label_visibility="collapsed")
 
 st.header("2. サブスキル条件")
-c1, c2, c3 = st.columns(3)
-with c1:
+col1, col2, col3 = st.columns(3)
+with col1:
     s10 = st.multiselect("10Lv", ALL_SKILLS)
     s75 = st.multiselect("75Lv", ALL_SKILLS)
-with c2:
+with col2:
     s25 = st.multiselect("25Lv", ALL_SKILLS)
     s100 = st.multiselect("100Lv", ALL_SKILLS)
-with c3:
+with col3:
     s50 = st.multiselect("50Lv", ALL_SKILLS)
 sany = st.multiselect("順不同：必須スキル", ALL_SKILLS)
 
-# --- 計算ロジック ---
-if st.button("計算開始 (10万回試行)", type="primary", use_container_width=True):
-    if not selected_natures or not selected_ings:
+# --- 計算 ---
+if st.button("計算開始", type="primary", use_container_width=True):
+    if not sel_n or not sel_i:
         st.error("条件を選んでください")
     else:
-        with st.spinner('シミュレーション中...'):
-            iterations = 100000; success = 0
-            total_ing_prob = sum([ING_PATTERNS[p] for p in selected_ings])
-            selected_nature_names = [n.split(" ")[0] for n in selected_natures]
-            for _ in range(iterations):
-                if random.random() > total_ing_prob: continue
-                all_n_names = [n.split(" ")[0] for n in NATURE_OPTIONS]
-                if random.choice(all_n_names) not in selected_nature_names: continue
-                sel = []
+        with st.spinner('計算中...'):
+            it = 100000; ok = 0
+            total_ip = sum([ING_PATTERNS[p] for p in sel_i])
+            sel_n_names = [n.split(" ")[0] for n in sel_n]
+            for _ in range(it):
+                if random.random() > total_ip: continue
+                if random.choice([n.split(" ")[0] for n in NATURE_OPTIONS]) not in sel_n_names: continue
+                s = []
                 def pk(p):
-                    v = [x for x in p if x not in sel]
+                    v = [x for x in p if x not in s]
                     return random.choice(v) if v else None
-                s10v = pk(GOLD_SKILLS if medal_val >= 1 else ALL_SKILLS); sel.append(s10v)
-                s25v = pk(GOLD_SKILLS if medal_val >= 2 else ALL_SKILLS); sel.append(s25v)
-                s50v = pk(GOLD_SKILLS if medal_val >= 3 else ALL_SKILLS); sel.append(s50v)
-                s75v = pk(ALL_SKILLS); sel.append(s75v)
-                s100v = pk(ALL_SKILLS); sel.append(s100v)
+                v10 = pk(GOLD_LIST if medal_v >= 1 else ALL_SKILLS); s.append(v10)
+                v25 = pk(GOLD_LIST if medal_v >= 2 else ALL_SKILLS); s.append(v25)
+                v50 = pk(GOLD_LIST if medal_v >= 3 else ALL_SKILLS); s.append(v50)
+                v75 = pk(ALL_SKILLS); s.append(v75)
+                v100 = pk(ALL_SKILLS); s.append(v100)
                 ca = True
-                for t, v in zip([s10, s25, s50, s75, s100], [s10v, s25v, s50v, s75v, s100v]):
+                for t, v in zip([s10, s25, s50, s75, s100], [v10, v25, v50, v75, v100]):
                     if t and v not in t: ca = False; break
-                cb = all(r in sel for r in sany) if sany else False
-                if (not any([s10, s25, s50, s75, s100, sany])) or ca or cb: success += 1
-            p = success / iterations
+                cb = all(r in s for r in sany) if sany else False
+                if (not any([s10, s25, s50, s75, s100, sany])) or ca or cb: ok += 1
+            p = ok / it
             st.metric("出現確率", f"{p*100:.5f} %")
             if p > 0: st.info(f"期待値: 約 {int(1/p):,} 匹に1匹")
