@@ -4,11 +4,26 @@ import random
 # ページ設定
 st.set_page_config(page_title="ポケスリ厳選計算機", page_icon="📊")
 
+# --- スマホで補正値が省略されないための魔法のスタイル ---
+st.markdown("""
+    <style>
+    /* 選択済みのラベルが省略(濃縮)されないようにする */
+    .stMultiSelect [data-baseweb="tag"] {
+        max-width: 1000px !important;
+        white-space: normal !important;
+    }
+    /* ボタンの余白調整 */
+    div.stButton > button {
+        width: 100%;
+        padding: 5px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # --- データ定義 ---
 GOLD_SKILLS = ["きのみの数S", "おてつだいボーナス", "睡眠EXPボーナス", "スキルレベルアップM", "げんき回復ボーナス", "ゆめのかけらボーナス", "リサーチEXPボーナス"]
 ALL_SKILLS = ["きのみの数S", "おてつだいボーナス", "おてつだいスピードM", "おてつだいスピードS", "食材確率アップM", "食材確率アップS", "スキル確率アップM", "スキル確率アップS", "スキルレベルアップM", "スキルレベルアップS", "最大所持数アップL", "最大所持数アップM", "最大所持数アップS", "げんき回復ボーナス", "睡眠EXPボーナス", "ゆめのかけらボーナス", "リサーチEXPボーナス"]
 
-# 性格データ（常に補正値が見えるようにラベル自体を補正値込みの名前に統一）
 NATURE_OPTIONS = [
     "さみしがり (おてスピ↑/げんき↓)", "いじっぱり (おてスピ↑/食材↓)", "やんちゃ (おてスピ↑/スキル↓)", "ゆうかん (おてスピ↑/EXP↓)",
     "ひかえめ (食材↑/おてスピ↓)", "おっとり (食材↑/げんき↓)", "うっかりや (食材↑/スキル↓)", "れいせい (食材↑/EXP↓)",
@@ -35,22 +50,21 @@ medal_val = {"なし (1〜9)": 0, "銅 (10〜39)": 1, "銀 (40〜99)": 2, "金 (
 
 # --- 性格選択セクション ---
 st.write("▼ 性格選択")
-col_n1, col_n2 = st.columns(2)
+col_n1, col_n2 = st.columns(2) # ボタンを横並びに配置
 if col_n1.button("性格を全選択"):
     st.session_state.selected_natures = NATURE_OPTIONS
 if col_n2.button("性格を全解除"):
     st.session_state.selected_natures = []
 
-# 選択後もラベル（補正値入り）を保持する設定
 selected_natures = st.multiselect(
-    "性格を選んでください（補正値も表示されます）", 
+    "性格を選んでください", 
     options=NATURE_OPTIONS, 
     key="selected_natures"
 )
 
 # --- 食材配列セクション ---
 st.write("▼ 食材配列")
-col_i1, col_i2 = st.columns(2)
+col_i1, col_i2 = st.columns(2) # ボタンを横並びに配置
 if col_i1.button("食材を全選択"):
     st.session_state.selected_ings = list(ING_PATTERNS.keys())
 if col_i2.button("食材を全解除"):
@@ -81,41 +95,4 @@ if st.button("計算開始 (10万回試行)", type="primary", use_container_widt
         with st.spinner('シミュレーション中...'):
             iterations = 100000
             success = 0
-            total_ing_prob = sum([ING_PATTERNS[p] for p in selected_ings])
-            
-            # 性格名（前方一致）だけで判定するためのリスト作成
-            selected_nature_names = [n.split(" ")[0] for n in selected_natures]
-            
-            for _ in range(iterations):
-                if random.random() > total_ing_prob: continue
-                
-                # 抽選される性格名のリスト（データ定義から抽出）
-                all_nature_names = [n.split(" ")[0] for n in NATURE_OPTIONS]
-                if random.choice(all_nature_names) not in selected_nature_names: continue
-                
-                selected_skills = []
-                def pick(pool):
-                    valid = [x for x in pool if x not in selected_skills]
-                    return random.choice(valid) if valid else None
-
-                sub10 = pick(GOLD_SKILLS if medal_val >= 1 else ALL_SKILLS); selected_skills.append(sub10)
-                sub25 = pick(GOLD_SKILLS if medal_val >= 2 else ALL_SKILLS); selected_skills.append(sub25)
-                sub50 = pick(GOLD_SKILLS if medal_val >= 3 else ALL_SKILLS); selected_skills.append(sub50)
-                sub75 = pick(ALL_SKILLS); selected_skills.append(sub75)
-                sub100 = pick(ALL_SKILLS); selected_skills.append(sub100)
-                
-                cond_a = True
-                for target, slot in zip([s10, s25, s50, s75, s100], [sub10, sub25, sub50, sub75, sub100]):
-                    if target and slot not in target: cond_a = False; break
-                cond_b = all(req in selected_skills for req in sany) if sany else False
-                
-                if (not any([s10, s25, s50, s75, s100, sany])) or cond_a or cond_b:
-                    success += 1
-            
-            prob = success / iterations
-            st.success(f"結果が出ました！")
-            st.metric("出現確率", f"{prob*100:.5f} %")
-            if prob > 0:
-                st.info(f"期待値: 約 {int(1/prob):,} 匹に1匹")
-            else:
-                st.warning("この条件に合う個体は10万回中0回でした。")
+            total_
