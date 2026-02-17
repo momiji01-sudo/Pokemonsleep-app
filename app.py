@@ -3,51 +3,49 @@ import random
 
 st.set_page_config(page_title="ポケスリ厳選計算機", page_icon="📊")
 
-# --- 【究極の強制力】標準機能を無視して横並びと省略禁止を叩き込む ---
+# --- CSS: 性格タグの「...」を物理的に排除し、背景を文字に密着させる ---
 st.markdown("""
     <style>
-    /* 1. 性格タグの省略[...]を絶対に許さず、中身に合わせて幅を無限に広げる */
+    /* 1. 性格タグの省略を完全に禁止 */
     div[data-baseweb="tag"] {
-        max-width: none !important;
-        width: auto !important;
+        max-width: none !important;      /* 横幅制限を解除 */
+        width: max-content !important;   /* 赤い背景を文字の長さに強制一致 */
         min-width: max-content !important;
-        white-space: nowrap !important;
+        white-space: nowrap !important;  /* 改行を禁止 */
         display: inline-flex !important;
-        flex-shrink: 0 !important;
+        flex-shrink: 0 !important;       /* 圧縮を禁止 */
     }
+    
     div[data-baseweb="tag"] span {
-        display: inline !important;
-        text-overflow: clip !important;
+        display: inline-block !important;
+        text-overflow: clip !important;  /* 省略記号(...)を消去 */
         overflow: visible !important;
         white-space: nowrap !important;
+        width: auto !important;
     }
-    /* 性格選択欄を横スクロール可能にする */
+
+    /* 2. 入力欄を横スクロール可能にして「...」を回避 */
     div[data-baseweb="select"] > div:first-child {
-        overflow-x: auto !important;
-        flex-wrap: nowrap !important;
+        overflow-x: auto !important;     /* はみ出た分は横にスクロール可能に */
+        flex-wrap: nowrap !important;    /* 折り返しを禁止 */
         display: flex !important;
     }
 
-    /* 2. ボタンを「絶対に」横に2つ並べる（Streamlitのcolumnを無視してフレックス化） */
-    [data-testid="stHorizontalBlock"] {
+    /* 3. ボタンの横並びを維持（現在の良い状態をキープ） */
+    [data-testid="stHorizontalBlock"]:has(button) {
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
-        justify-content: space-between !important;
-        width: 100% !important;
+        gap: 10px !important;
     }
-    [data-testid="stHorizontalBlock"] > div {
-        width: 48% !important;
-        min-width: 48% !important;
-        flex: 1 1 48% !important;
-    }
-    button {
-        width: 100% !important;
+    [data-testid="stHorizontalBlock"]:has(button) > div {
+        flex: 1 1 50% !important;
+        min-width: 0 !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- データ定義 ---
+# --- データ定義 (色の絵文字付き) ---
 GOLD_LIST = ["🟡きのみの数S", "🟡おてつだいボーナス", "🟡睡眠EXPボーナス", "🟡スキルレベルアップM", "🟡げんき回復ボーナス", "🟡ゆめのかけらボーナス", "🟡リサーチEXPボーナス"]
 ALL_SKILLS = ["🟡きのみの数S", "🟡おてつだいボーナス", "🟡睡眠EXPボーナス", "🟡スキルレベルアップM", "🟡げんき回復ボーナス", "🟡ゆめのかけらボーナス", "🟡リサーチEXPボーナス",
               "🔵おてつだいスピードM", "🔵食材確率アップM", "🔵スキル確率アップM", "🔵スキルレベルアップS", "🔵最大所持数アップL", "🔵最大所持数アップM",
@@ -65,7 +63,6 @@ if 'si' not in st.session_state: st.session_state.si = []
 
 st.title("📊 ポケスリ厳選計算機")
 
-# --- UIセクション ---
 st.header("1. 基本条件")
 medal = st.selectbox("フレンドレベル（メダル）", ["なし (1〜9)", "銅 (10〜39)", "銀 (40〜99)", "金 (100〜)"], index=1)
 medal_v = {"なし (1〜9)": 0, "銅 (10〜39)": 1, "銀 (40〜99)": 2, "金 (100〜)": 3}[medal]
@@ -92,7 +89,7 @@ with col2:
     s100 = st.multiselect("100Lv", ALL_SKILLS)
 with col3:
     s50 = st.multiselect("50Lv", ALL_SKILLS)
-sany = st.multiselect("順不同：必須スキル", ALL_SKILLS)
+sany = st.multiselect("順一度：必須スキル", ALL_SKILLS)
 
 if st.button("計算開始", type="primary", use_container_width=True):
     if not st.session_state.sn or not st.session_state.si:
