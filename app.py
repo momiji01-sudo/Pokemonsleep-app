@@ -9,18 +9,24 @@ st.markdown("""
     [data-testid="stHorizontalBlock"]:has(button) {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important;
         gap: 10px !important;
-    }
-    [data-testid="stHorizontalBlock"]:has(button) > div {
-        flex: 1 1 50% !important;
-        min-width: 0 !important;
     }
     .stCheckbox {
         white-space: nowrap !important;
+        margin-bottom: -10px !important;
+    }
+    /* 見出しを少し目立たせる */
+    .group-label {
+        font-weight: bold;
+        color: #ff4b4b;
+        margin-top: 10px;
+        border-bottom: 1px solid #ddd;
     }
     </style>
 """, unsafe_allow_html=True)
+
+# バージョン確認用（Chromeのキャッシュ対策）
+st.caption("Ver 6.4 - 2026/02/18")
 
 # --- データ定義 ---
 GOLD_LIST = ["🟡きのみの数S", "🟡おてつだいボーナス", "🟡睡眠EXPボーナス", "🟡スキルレベルアップM", "🟡げんき回復ボーナス", "🟡ゆめのかけらボーナス", "🟡リサーチEXPボーナス"]
@@ -30,15 +36,15 @@ ALL_SKILLS = [
     "⚪おてつだいスピードS", "⚪食材確率アップS", "⚪スキル確率アップS", "⚪最大所持数アップS"
 ]
 
-# 性格：上昇補正の項目順に整理
-NATURE_MASTER = [
-    ("さみしがり", "おてスピ↑ / げんき↓"), ("いじっぱり", "おてスピ↑ / 食材↓"), ("やんちゃ", "おてスピ↑ / スキル↓"), ("ゆうかん", "おてスピ↑ / EXP↓"),
-    ("ひかえめ", "食材↑ / おてスピ↓"), ("おっとり", "食材↑ / げんき↓"), ("うっかりや", "食材↑ / スキル↓"), ("れいせい", "食材↑ / EXP↓"),
-    ("おだやか", "スキル↑ / おてスピ↓"), ("おとなしい", "スキル↑ / げんき↓"), ("しんちょう", "スキル↑ / 食材↓"), ("なまいき", "スキル↑ / EXP↓"),
-    ("ずぶとい", "げんき↑ / おてスピ↓"), ("わんぱく", "げんき↑ / 食材↓"), ("のうてんき", "げんき↑ / スキル↓"), ("のんき", "げんき↑ / EXP↓"),
-    ("おくびょう", "EXP↑ / おてスピ↓"), ("せっかち", "EXP↑ / げんき↓"), ("ようき", "EXP↑ / 食材↓"), ("むじゃき", "EXP↑ / スキル↓"),
-    ("てれや", "無補正"), ("がんばりや", "無補正"), ("すなお", "無補正"), ("まじめ", "無補正"), ("きまぐれ", "無補正")
-]
+# 上昇補正ごとにグループ化
+NATURE_GROUPS = {
+    "【おてスピ↑】": [("さみしがり", "げんき↓"), ("いじっぱり", "食材↓"), ("やんちゃ", "スキル↓"), ("ゆうかん", "EXP↓")],
+    "【食材↑】": [("ひかえめ", "おてスピ↓"), ("おっとり", "げんき↓"), ("うっかりや", "スキル↓"), ("れいせい", "EXP↓")],
+    "【スキル↑】": [("おだやか", "おてスピ↓"), ("おとなしい", "げんき↓"), ("しんちょう", "食材↓"), ("なまいき", "EXP↓")],
+    "【げんき↑】": [("ずぶとい", "おてスピ↓"), ("わんぱく", "食材↓"), ("のうてんき", "スキル↓"), ("のんき", "EXP↓")],
+    "【EXP↑】": [("おくびょう", "おてスピ↓"), ("せっかち", "げんき↓"), ("ようき", "食材↓"), ("むじゃき", "スキル↓")],
+    "【無補正】": [("てれや", ""), ("がんばりや", ""), ("すなお", ""), ("まじめ", ""), ("きまぐれ", "")]
+}
 
 # 食材：アルファベット順
 ING_LIST = ['AAA', 'AAB', 'AAC', 'ABA', 'ABB', 'ABC']
@@ -53,19 +59,26 @@ st.header("1. 基本条件")
 medal = st.selectbox("フレンドレベル（メダル）", ["なし (1〜9)", "銅 (10〜39)", "銀 (40〜99)", "金 (100〜)"], index=1)
 medal_v = {"なし (1〜9)": 0, "銅 (10〜39)": 1, "銀 (40〜99)": 2, "金 (100〜)": 3}[medal]
 
-st.write("▼ 性格選択（上昇補正順）")
+st.write("▼ 性格選択")
 nc1, nc2 = st.columns(2)
-if nc1.button("性格を全選択"): st.session_state.sel_n = [n[0] for n in NATURE_MASTER]
+if nc1.button("性格を全選択"): 
+    all_n = []
+    for g in NATURE_GROUPS.values(): all_n.extend([n[0] for n in g])
+    st.session_state.sel_n = all_n
 if nc2.button("性格を全解除"): st.session_state.sel_n = []
 
 selected_natures = []
-cols_n = st.columns(2)
-for i, (name, effect) in enumerate(NATURE_MASTER):
-    is_on = name in st.session_state.sel_n
-    if cols_n[i % 2].checkbox(f"{name} ({effect})", value=is_on, key=f"n_{name}"):
-        selected_natures.append(name)
+# グループごとに表示
+for group_name, natures in NATURE_GROUPS.items():
+    st.markdown(f'<div class="group-label">{group_name}</div>', unsafe_allow_html=True)
+    cols = st.columns(2)
+    for i, (name, effect) in enumerate(natures):
+        is_on = name in st.session_state.sel_n
+        label = f"{name} ({effect})" if effect else name
+        if cols[i % 2].checkbox(label, value=is_on, key=f"n_{name}"):
+            selected_natures.append(name)
 
-st.write("▼ 食材配列選択（アルファベット順）")
+st.write("▼ 食材配列（アルファベット順）")
 ic1, ic2 = st.columns(2)
 if ic1.button("食材を全選択"): st.session_state.sel_i = ING_LIST
 if ic2.button("食材を全解除"): st.session_state.sel_i = []
@@ -94,8 +107,12 @@ if st.button("計算開始", type="primary", use_container_width=True):
             total_ing_p = sum([ING_VALS[p] for p in selected_ings])
             for _ in range(it):
                 if random.random() > total_ing_p: continue
-                nature_sample = random.choice(NATURE_MASTER)[0]
+                # 性格判定
+                flat_natures = []
+                for g in NATURE_GROUPS.values(): flat_natures.extend([n[0] for n in g])
+                nature_sample = random.choice(flat_natures)
                 if nature_sample not in selected_natures: continue
+                
                 s = []
                 def pk(pool):
                     v = [x for x in pool if x not in s]
@@ -105,6 +122,7 @@ if st.button("計算開始", type="primary", use_container_width=True):
                 v50 = pk(GOLD_LIST if medal_v >= 3 else ALL_SKILLS); s.append(v50)
                 v75 = pk(ALL_SKILLS); s.append(v75)
                 v100 = pk(ALL_SKILLS); s.append(v100)
+                
                 ca = True
                 for t, v in zip([s10, s25, s50, s75, s100], [v10, v25, v50, v75, v100]):
                     if t and v not in t: ca = False; break
