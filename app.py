@@ -2,21 +2,20 @@ import streamlit as st
 
 st.set_page_config(page_title="ポケスリ理論値計算機", page_icon="📊", layout="centered")
 
-# --- CSS: スマホChromeでの1列化を完全に阻止する ---
+# --- CSS: スマホChromeでのレイアウト維持 ---
 st.markdown("""
     <style>
     .main .block-container { max-width: 500px !important; padding-left: 10px !important; padding-right: 10px !important; }
     
-    /* 強制2列/3列表示のロジック */
     [data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important; /* 折り返しを禁止して横並びを死守 */
+        flex-wrap: nowrap !important;
         gap: 4px !important;
     }
     [data-testid="stHorizontalBlock"] > div {
         flex: 1 1 0% !important;
-        min-width: 0 !important; /* Chromeの最小幅制限を解除 */
+        min-width: 0 !important;
     }
 
     button { padding: 0px 6px !important; font-size: 0.7rem !important; height: 22px !important; width: auto !important; min-width: 40px !important; }
@@ -31,15 +30,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- サブスキル定義 (金 → 青系統 → 白系統) ---
+# --- データ定義 ---
 ALL_SKILLS = [
-    # 1. 金サブスキル
     "🟡きのみの数S", "🟡おてつだいボーナス", "🟡スキルレベルアップM", 
     "🟡睡眠EXPボーナス", "🟡げんき回復ボーナス", "🟡ゆめのかけらボーナス", "🟡リサーチEXPボーナス",
-    # 2. 青色サブスキル (各系統)
     "🔵おてつだいスピードM", "🔵食材確率アップM", "🔵スキル確率アップM", 
     "🔵スキルレベルアップS", "🔵最大所持数アップL", "🔵最大所持数アップM",
-    # 3. 白色サブスキル (各系統)
     "⚪おてつだいスピードS", "⚪食材確率アップS", "⚪スキル確率アップS", "⚪最大所持数アップS"
 ]
 
@@ -106,7 +102,7 @@ st.header("1. 基本条件")
 st.selectbox("フレンドレベル", ["なし (1〜9)", "銅 (10〜39)", "銀 (40〜99)", "金 (100〜)"], index=1, key="medal_select")
 allow_imp = st.radio("幽閉判定", ["幽閉あり（すべて許可）", "幽閉なし（進化不可を除外）"], horizontal=True)
 
-st.write("▼ 性格選択 (Chrome 2×2死守)")
+st.write("▼ 性格選択")
 c1, c2 = st.columns(2)
 c1.button("全性格を選択", on_click=lambda: [st.session_state.update({f"n_{n[0]}": True for g in NATURE_GROUPS.values() for n in g})], use_container_width=True)
 c2.button("全性格を解除", on_click=lambda: [st.session_state.update({f"n_{n[0]}": False for g in NATURE_GROUPS.values() for n in g})], use_container_width=True)
@@ -129,13 +125,18 @@ for g_label, natures in NATURE_GROUPS.items():
                 st.checkbox(f"{n2}({s2})", key=f"n_{n2}")
 
 st.markdown('<div class="section-margin" style="margin-top: 40px !important;"></div>', unsafe_allow_html=True)
-st.write("▼ 食材配列選択 (Chrome 3×2死守)")
+st.write("▼ 食材配列選択")
+ic1, ic2 = st.columns(2)
+ic1.button("全食材を選択", on_click=lambda: [st.session_state.update({f"i_{i}": True for i in ING_LIST})], use_container_width=True)
+ic2.button("全食材を解除", on_click=lambda: [st.session_state.update({f"i_{i}": False for i in ING_LIST})], use_container_width=True)
+
 for i in range(0, 6, 3):
     r_cols_i = st.columns(3)
     for j in range(3):
         n = ING_LIST[i+j]
         with r_cols_i[j]: st.checkbox(n, key=f"i_{n}")
 
+st.markdown('<div class="section-margin"></div>', unsafe_allow_html=True)
 st.header("2. サブスキル条件")
 st.multiselect("10Lv", ALL_SKILLS, key="s10")
 st.multiselect("25Lv", ALL_SKILLS, key="s25")
